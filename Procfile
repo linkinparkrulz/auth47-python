@@ -1,1 +1,2 @@
-web: python examples/web-app/app.py
+web: PYTHONPATH=/app/src:$PYTHONPATH python examples/web-app/app.py
+
