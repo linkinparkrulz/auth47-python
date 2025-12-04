@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Auth47 Web App Example - Home{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="text-center mb-5">
+            <h1 class="display-4 auth47-logo">Auth47 Web App Example</h1>
+            <p class="lead">Demonstrating Bitcoin-based authentication using the Auth47 protocol</p>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-shield-lock"></i> Secure Authentication
+                        </h5>
+                        <p class="card-text">
+                            Auth47 uses Bitcoin payment codes and cryptographic signatures to provide 
+                            secure, decentralized authentication without passwords.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-qr-code"></i> QR Code Login
+                        </h5>
+                        <p class="card-text">
+                            Simply scan a QR code with your Bitcoin wallet to authenticate. 
+                            No typing passwords or remembering credentials.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">
+                <i class="bi bi-box-arrow-in-right"></i> Try Authentication
+            </a>
+        </div>
+
+        <div class="mt-5">
+            <h3>How It Works</h3>
+            <div class="row">
+                <div class="col-md-4 text-center mb-3">
+                    <div class="p-3">
+                        <div style="font-size: 2rem;">1️⃣</div>
+                        <h5>Generate Challenge</h5>
+                        <p>Server creates a unique Auth47 challenge with a nonce and expiry time.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center mb-3">
+                    <div class="p-3">
+                        <div style="font-size: 2rem;">2️⃣</div>
+                        <h5>Sign with Wallet</h5>
+                        <p>User scans QR code and signs the challenge with their Bitcoin wallet.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center mb-3">
+                    <div class="p-3">
+                        <div style="font-size: 2rem;">3️⃣</div>
+                        <h5>Verify & Access</h5>
+                        <p>Server verifies the signature and grants access to protected resources.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-5">
+            <h3>Features Demonstrated</h3>
+            <ul class="list-group">
+                <li class="list-group-item">
+                    <strong>Challenge Generation:</strong> Creates secure Auth47 URIs with nonces and expiry
+                </li>
+                <li class="list-group-item">
+                    <strong>QR Code Display:</strong> Mobile-friendly authentication using QR codes
+                </li>
+                <li class="list-group-item">
+                    <strong>Proof Verification:</strong> Validates Bitcoin signatures and payment codes
+                </li>
+                <li class="list-group-item">
+                    <strong>Session Management:</strong> Maintains authentication state securely
+                </li>
+                <li class="list-group-item">
+                    <strong>Protected Routes:</strong> Demonstrates access control for authenticated users
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

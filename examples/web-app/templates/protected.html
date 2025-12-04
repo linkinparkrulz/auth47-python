@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Protected Area{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="text-center mb-4">
+            <h2>🎉 Authentication Successful!</h2>
+            <p class="text-muted">You have successfully authenticated using Auth47</p>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-shield-check"></i> Protected Content
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    Congratulations! You now have access to this protected area. 
+                    This content is only visible to users who have successfully authenticated 
+                    using the Auth47 protocol with their Bitcoin wallet.
+                </p>
+                
+                <div class="alert alert-success">
+                    <strong>Authentication Method:</strong> Auth47 with Bitcoin cryptographic signatures<br>
+                    <strong>Security Level:</strong> High (cryptographic proof of ownership)<br>
+                    <strong>Password Required:</strong> No
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Authentication Details</h5>
+            </div>
+            <div class="card-body">
+                {% if user_data %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Challenge Information</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Protocol Version:</strong></td>
+                                    <td>{{ user_data.get('auth47_response', 'N/A') }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Challenge:</strong></td>
+                                    <td class="text-break" style="font-size: 12px;">{{ user_data.get('challenge', 'N/A') }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Identity Information</h6>
+                            <table class="table table-sm">
+                                {% if user_data.get('nym') %}
+                                <tr>
+                                    <td><strong>Payment Code (Nym):</strong></td>
+                                    <td class="text-break" style="font-size: 12px;">{{ user_data.nym[:20] }}...</td>
+                                </tr>
+                                {% endif %}
+                                {% if user_data.get('address') %}
+                                <tr>
+                                    <td><strong>Bitcoin Address:</strong></td>
+                                    <td class="text-break" style="font-size: 12px;">{{ user_data.address }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <td><strong>Signature:</strong></td>
+                                    <td class="text-break" style="font-size: 12px;">{{ user_data.get('signature', 'N/A')[:30] }}...</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No user data available.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">What You Can Do Now</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 text-center mb-3">
+                        <div class="p-3">
+                            <div style="font-size: 2rem;">🔐</div>
+                            <h6>Access Protected APIs</h6>
+                            <p class="small">Your session is now authenticated and can access protected endpoints.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center mb-3">
+                        <div class="p-3">
+                            <div style="font-size: 2rem;">📊</div>
+                            <h6>View Private Data</h6>
+                            <p class="small">Access user-specific data and resources.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center mb-3">
+                        <div class="p-3">
+                            <div style="font-size: 2rem;">⚙️</div>
+                            <h6>Manage Settings</h6>
+                            <p class="small">Configure your account and preferences.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Session Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Authentication Status:</strong> 
+                            <span class="badge bg-success">Authenticated</span>
+                        </p>
+                        <p><strong>Session Type:</strong> Auth47 Bitcoin Authentication</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Security Features:</strong></p>
+                        <ul class="small">
+                            <li>Cryptographic signature verification</li>
+                            <li>No password storage required</li>
+                            <li>Resistance to phishing attacks</li>
+                            <li>Decentralized identity</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center">
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-house"></i> Back to Home
+                </a>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </a>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <div class="alert alert-info">
+                <strong>Developer Note:</strong> This protected area demonstrates how Auth47 authentication 
+                can be integrated into web applications. The user's identity is verified through 
+                cryptographic signatures rather than traditional username/password authentication.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
