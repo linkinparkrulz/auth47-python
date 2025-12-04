@@ -53,7 +53,7 @@ app.secret_key = config['secret_key']
 
 # Generate callback URL based on environment
 if config['environment'] == 'production':
-    CALLBACK_URL = f"https://{config['app_name']}.herokuapp.com/auth/callback"
+    CALLBACK_URL = f"https://{config['app_name']}/auth/callback"
 else:
     CALLBACK_URL = f"http://{config['app_name']}/auth/callback"
 
