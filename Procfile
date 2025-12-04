@@ -1,1 +1,1 @@
-web: pip install -e . && python examples/web-app/app.py
+web: python examples/web-app/app.py
