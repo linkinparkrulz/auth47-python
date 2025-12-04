@@ -7,7 +7,7 @@ import os
 import sys
 import secrets
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, session, redirect, url_for, flash
+from flask import Flask, render_template, request, session, redirect, url_for, flash, jsonify
 import qrcode
 from io import BytesIO
 import base64
@@ -23,17 +23,25 @@ except ImportError:
 
 app = Flask(__name__)
 
+# In-memory store for nonces (maps nonce -> session_id)
+# In production, use Redis or a database
+nonce_store = {}
+
 # Environment-aware configuration
 def get_environment_config():
     """Detect environment and return appropriate configuration."""
-    # Check if we're on Heroku (PORT environment variable is set)
+    # Check if we're on Heroku/Railway (PORT environment variable is set)
     if 'PORT' in os.environ:
+        # Check for Railway-specific domain
+        railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
+        app_name = railway_domain if railway_domain else os.environ.get('HEROKU_APP_NAME', 'auth47-app')
+        
         return {
             'environment': 'production',
             'debug': False,
             'host': '0.0.0.0',
             'port': int(os.environ.get('PORT', 5000)),
-            'app_name': os.environ.get('HEROKU_APP_NAME', 'auth47-app'),
+            'app_name': app_name,
             'secret_key': os.environ.get('SECRET_KEY', secrets.token_hex(32))
         }
     else:
@@ -53,7 +61,9 @@ app.secret_key = config['secret_key']
 
 # Generate callback URL based on environment
 if config['environment'] == 'production':
-    CALLBACK_URL = f"https://{config['app_name']}/auth/callback"
+    # Remove .herokuapp.com if it's in the app_name
+    base_domain = config['app_name'].replace('.herokuapp.com', '')
+    CALLBACK_URL = f"https://{base_domain}/auth/callback"
 else:
     CALLBACK_URL = f"http://{config['app_name']}/auth/callback"
 
@@ -69,7 +79,7 @@ def print_startup_info():
     if config['environment'] == 'development':
         print(f"🌐 Open http://localhost:5000 in your browser")
     else:
-        print(f"🌐 App URL: https://{config['app_name']}.herokuapp.com")
+        print(f"🌐 App URL: https://{config['app_name']}")
     print(f"📋 This app demonstrates Auth47 authentication flow")
     print("")
 
@@ -86,14 +96,23 @@ def login():
     # Generate a secure random nonce
     nonce = secrets.token_hex(12)
     
-    # Store nonce in session for verification
+    # Store nonce mapped to current session ID in our nonce store
+    nonce_store[nonce] = {
+        'session_id': session.sid if hasattr(session, 'sid') else secrets.token_hex(16),
+        'timestamp': datetime.now()
+    }
+    
+    # Also store in session for the browser
     session['auth_nonce'] = nonce
     
     # Generate Auth47 URI with expiry (15 minutes from now)
     expiry = datetime.now() + timedelta(minutes=15)
     
     # Create full absolute URL for the redirect resource
-    redirect_url = f"{request.base_url}protected"
+    if request.host.startswith('localhost'):
+        redirect_url = f"http://{request.host}/protected"
+    else:
+        redirect_url = f"https://{request.host}/protected"
     
     auth_uri = verifier.generate_uri(
         nonce=nonce,
@@ -125,43 +144,49 @@ def auth_callback():
         # Get proof from request
         proof = request.get_json()
         if not proof:
-            return {'error': 'No proof provided'}, 400
+            return jsonify({'error': 'No proof provided'}), 400
         
-        # Verify the nonce matches what we generated
-        if 'auth_nonce' not in session:
-            return {'error': 'No authentication session found'}, 400
-        
-        expected_nonce = session['auth_nonce']
         if 'challenge' not in proof:
-            return {'error': 'No challenge in proof'}, 400
+            return jsonify({'error': 'No challenge in proof'}), 400
         
         # Extract nonce from challenge
-        from urllib.parse import urlparse, parse_qs
+        from urllib.parse import urlparse
         parsed_challenge = urlparse(proof['challenge'])
-        if parsed_challenge.netloc != expected_nonce:
-            return {'error': 'Invalid nonce in challenge'}, 400
+        nonce = parsed_challenge.netloc
+        
+        # Check if nonce exists in our store
+        if nonce not in nonce_store:
+            return jsonify({'error': 'Invalid or expired nonce'}), 400
+        
+        # Get the stored session info for this nonce
+        nonce_info = nonce_store[nonce]
+        
+        # Check if nonce is expired (15 minutes)
+        if (datetime.now() - nonce_info['timestamp']).total_seconds() > 900:
+            del nonce_store[nonce]
+            return jsonify({'error': 'Authentication session expired'}), 400
         
         # Verify the proof
         result = verifier.verify_proof(proof)
         
         if result['result'] == 'ok':
-            # Authentication successful
-            session['authenticated'] = True
-            session['user_data'] = result['data']
-            session.pop('auth_nonce', None)  # Clean up nonce
+            # Store authentication in a temporary store using nonce as key
+            # This allows the browser to pick it up
+            nonce_store[nonce]['authenticated'] = True
+            nonce_store[nonce]['user_data'] = result['data']
             
-            return {
+            return jsonify({
                 'success': True,
                 'message': 'Authentication successful!',
-                'redirect': url_for('protected')
-            }
+                'nonce': nonce
+            })
         else:
-            return {'error': result['error']}, 400
+            return jsonify({'error': result['error']}), 400
             
     except Auth47Error as e:
-        return {'error': str(e)}, 400
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
-        return {'error': f'Authentication failed: {str(e)}'}, 500
+        return jsonify({'error': f'Authentication failed: {str(e)}'}), 500
 
 @app.route('/protected')
 def protected():
@@ -183,10 +208,30 @@ def logout():
 @app.route('/api/status')
 def api_status():
     """API endpoint to check authentication status."""
-    return {
+    # Check if we have a nonce in our session
+    nonce = session.get('auth_nonce')
+    
+    if nonce and nonce in nonce_store:
+        nonce_info = nonce_store[nonce]
+        
+        # Check if this nonce has been authenticated
+        if nonce_info.get('authenticated'):
+            # Transfer the authentication to the session
+            session['authenticated'] = True
+            session['user_data'] = nonce_info['user_data']
+            
+            # Clean up the nonce from store
+            del nonce_store[nonce]
+            
+            return jsonify({
+                'authenticated': True,
+                'user_data': nonce_info['user_data']
+            })
+    
+    return jsonify({
         'authenticated': session.get('authenticated', False),
         'user_data': session.get('user_data', {}) if session.get('authenticated') else None
-    }
+    })
 
 if __name__ == '__main__':
     print_startup_info()
